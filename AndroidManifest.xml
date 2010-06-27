@@ -1,0 +1,64 @@
+<?xml version="1.0" encoding="utf-8"?>
+<manifest
+  xmlns:android="http://schemas.android.com/apk/res/android"
+  android:versionCode="1"
+  android:versionName="0.5" package="net.bitheap.sidplayer">
+  <application
+    android:icon="@drawable/icon"
+    android:label="@string/app_name">
+
+    <activity
+      android:name=".SidListActivity"
+      android:label="@string/app_name">
+      <intent-filter>
+        <action
+          android:name="android.intent.action.MAIN" />
+        <category
+          android:name="android.intent.category.LAUNCHER" />
+      </intent-filter>
+
+      <intent-filter>
+        <action
+          android:name="android.intent.action.SEARCH" />
+        <category
+          android:name="android.intent.category.DEFAULT" />
+      </intent-filter>
+
+      <meta-data
+        android:resource="@xml/searchable"
+        android:name="android.app.searchable" />
+
+    </activity>
+
+    <activity android:name=".PlayerActivity"/>
+
+    <service
+      android:name=".SidPlayerService"
+      android:process=":player_service">
+      <intent-filter>
+        <action
+          android:name="PlaySid" />
+      </intent-filter>
+    </service>
+
+    <provider
+      android:authorities="net.bitheap.provider.sidzip"
+      android:name=".SidZipContentProvider"
+      android:process=":zip_provider">
+      <path-permission
+        android:path="/search_suggest_query"
+        android:readPermission="android.permission.GLOBAL_SEARCH" />
+    </provider>
+
+  <activity android:name=".AboutActivity"></activity>
+  <activity android:name=".HSVCInstallationActivity"></activity>
+</application>
+
+  <uses-permission
+    android:name="android.permission.WAKE_LOCK" />
+
+  <uses-permission
+    android:name="android.permission.WRITE_EXTERNAL_STORAGE" />
+  <uses-sdk
+    android:targetSdkVersion="7" android:minSdkVersion="3"/>
+</manifest> 

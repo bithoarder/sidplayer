@@ -1,0 +1,10 @@
+*~
+/bin/
+/gen/
+/jni/external/include/
+/jni/external/lib/
+/jni/external/libsidplay-2.1.1+20060528.ccr/
+/jni/external/resid-0.16.2-ccr/
+/jni/external/resid-builder-1.0.1+20060528.ccr/
+/jni/Release/
+/libs/armeabi/libSidPlayerJNI.so

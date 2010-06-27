@@ -1,0 +1,9 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+  <string
+    name="app_name">SID Player</string>
+  <string
+    name="search_label">some search label</string>
+  <string
+    name="search_hint">some search hint</string>
+</resources>
