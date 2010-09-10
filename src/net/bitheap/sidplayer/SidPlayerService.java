@@ -1,5 +1,7 @@
 package net.bitheap.sidplayer;
 
+import com.google.android.apps.analytics.GoogleAnalyticsTracker;
+
 import android.app.Notification;
 import android.app.NotificationManager;
 import android.app.PendingIntent;
@@ -17,6 +19,8 @@ import android.os.PowerManager;
 import android.os.Process;
 import android.os.RemoteException;
 import android.os.PowerManager.WakeLock;
+import android.telephony.PhoneStateListener;
+import android.telephony.TelephonyManager;
 import android.util.Log;
 
 public class SidPlayerService extends Service implements Runnable
@@ -33,6 +37,9 @@ public class SidPlayerService extends Service implements Runnable
   private volatile SidPlayer m_sidPlayer;
   private volatile Thread m_thread;
   private WakeLock m_wakeLock;
+
+  private long m_playingStartedAt;
+  private String m_playingName;
 
   private final ISidPlayerService.Stub m_binder = new ISidPlayerService.Stub()
   {
@@ -100,6 +107,7 @@ public class SidPlayerService extends Service implements Runnable
       if(m_playlist!=null && playlistIndex>=0 && playlistIndex<m_playlist.length)
       {
         m_playlistIndex = playlistIndex;
+
         stopThread();
         m_sidPlayer = null;
         startThread();
@@ -127,6 +135,22 @@ public class SidPlayerService extends Service implements Runnable
       }
     }
   };
+  
+  private final PhoneStateListener m_phoneStateListener = new PhoneStateListener()
+  {
+    public void onCallStateChanged(int state, String incomingNumber)
+    {
+      switch(state)
+      {
+      case TelephonyManager.CALL_STATE_RINGING:
+      case TelephonyManager.CALL_STATE_OFFHOOK:
+        stopThread();
+        break;
+      }
+    }
+  };
+
+  private GoogleAnalyticsTracker m_tracker;
 
   @Override
   public IBinder onBind(Intent intent)
@@ -140,14 +164,21 @@ public class SidPlayerService extends Service implements Runnable
   {
     Log.d(MODULE, "OnCreate called");
 
+    m_tracker = GoogleAnalyticsTracker.getInstance();
+    m_tracker.start("UA-18467147-1", this);
+    m_tracker.setProductVersion("ver1", "ver2");
+    
     Process.setThreadPriority(Process.THREAD_PRIORITY_AUDIO);
+    
+    TelephonyManager tm = (TelephonyManager)getSystemService(Context.TELEPHONY_SERVICE);
+    tm.listen(m_phoneStateListener, PhoneStateListener.LISTEN_CALL_STATE);
     
     PowerManager pm = (PowerManager)getSystemService(Context.POWER_SERVICE);
     m_wakeLock = pm.newWakeLock(PowerManager.PARTIAL_WAKE_LOCK, "SidPlayerService");
 
     int minBufferSize = AudioTrack.getMinBufferSize(44100, AudioFormat.ENCODING_PCM_16BIT, AudioFormat.CHANNEL_CONFIGURATION_MONO);
     Log.d(MODULE, "minBufferSize="+minBufferSize);
-    m_audio = new AudioTrack(AudioManager.STREAM_MUSIC, 44100, AudioFormat.CHANNEL_CONFIGURATION_MONO , AudioFormat.ENCODING_PCM_16BIT, Math.max(minBufferSize, 4*1024), AudioTrack.MODE_STREAM);
+    m_audio = new AudioTrack(AudioManager.STREAM_MUSIC, 44100, AudioFormat.CHANNEL_CONFIGURATION_MONO , AudioFormat.ENCODING_PCM_16BIT, Math.max(minBufferSize, 32*1024), AudioTrack.MODE_STREAM);
     m_audioBufferSize = 1024;
   }
   
@@ -214,6 +245,9 @@ public class SidPlayerService extends Service implements Runnable
     {
       m_thread = new Thread(this);
       m_thread.start();
+      
+      m_playingStartedAt = java.lang.System.currentTimeMillis();
+      m_playingName = m_sidPlayer.getInfoString(0);
     }
   }
 
@@ -228,6 +262,14 @@ public class SidPlayerService extends Service implements Runnable
     
     if(thread != null)
     {
+      long dt = java.lang.System.currentTimeMillis() - m_playingStartedAt;
+      if(dt > 1*1000)
+      {
+        Log.v(MODULE, "played " + m_playingName + " for " + (dt/1000.0) + "secs");
+        m_tracker.trackEvent("song", "played", m_playingName, (int)(dt/1000));
+        m_tracker.dispatch();
+      }
+
       thread.interrupt();
       try
       {

@@ -8,3 +8,5 @@
 /jni/external/resid-builder-1.0.1+20060528.ccr/
 /jni/Release/
 /libs/armeabi/libSidPlayerJNI.so
+/jni_old/
+/backup/

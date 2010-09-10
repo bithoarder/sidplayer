@@ -1,5 +1,7 @@
 package net.bitheap.sidplayer;
 
+import com.google.android.apps.analytics.GoogleAnalyticsTracker;
+
 import net.bitheap.sidplayer.R;
 
 import android.app.Activity;
@@ -58,11 +60,15 @@ public class SidListActivity extends Activity
     }
   };
 
+  private GoogleAnalyticsTracker m_tracker;
+
+  protected long m_playingStartedAt;
+
   @Override
   public void onCreate(Bundle savedInstanceState) 
   {
     Log.v(MODULE, "action="+getIntent().getAction());
-
+    
     super.onCreate(savedInstanceState);
     setContentView(R.layout.main);
     setVolumeControlStream(AudioManager.STREAM_MUSIC);
@@ -108,6 +114,10 @@ public class SidListActivity extends Activity
         {
           m_service.setPlaylist(playlist);
           m_service.playPlaylistIndex(arg2);
+          
+          //m_playingStartedAt = java.lang.System.currentTimeMillis();
+          //m_playingName = m_service.getInfoString(0);
+
         }
         catch(RemoteException e)
         {
@@ -144,11 +154,23 @@ public class SidListActivity extends Activity
       }
     });
   }
+  
+  @Override
+  protected void onDestroy()
+  {
+    super.onDestroy();
+  }
 
   @Override
   protected void onStart()
   {
     super.onStart();
+
+    m_tracker = GoogleAnalyticsTracker.getInstance();
+    m_tracker.start("UA-18467147-1", this);
+    m_tracker.setProductVersion("ver1", "ver2");
+    m_tracker.trackPageView("/SidListActivity");
+    m_tracker.dispatch();
     
     Intent playSidIntent = new Intent(this, SidPlayerService.class);
     startService(playSidIntent);
@@ -161,7 +183,12 @@ public class SidListActivity extends Activity
   protected void onStop()
   {
     super.onStop();
-    
+
+    m_tracker.trackPageView("/Unknown");
+    m_tracker.dispatch();
+    m_tracker.stop();
+    m_tracker = null;
+
     if(m_serviceConnection != null)
     {
       unbindService(m_serviceConnection);

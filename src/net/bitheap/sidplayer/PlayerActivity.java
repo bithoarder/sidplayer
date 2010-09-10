@@ -1,5 +1,7 @@
 package net.bitheap.sidplayer;
 
+import com.google.android.apps.analytics.GoogleAnalyticsTracker;
+
 import net.bitheap.sidplayer.R;
 
 import android.app.Activity;
@@ -53,6 +55,8 @@ public class PlayerActivity extends Activity implements OnClickListener
       updateSongInfo();
     }
   };
+
+  private GoogleAnalyticsTracker m_tracker;
   
   
   @Override
@@ -88,7 +92,13 @@ public class PlayerActivity extends Activity implements OnClickListener
   protected void onStart()
   {
     super.onStart();
-    
+
+    m_tracker = GoogleAnalyticsTracker.getInstance();
+    m_tracker.start("UA-18467147-1", this);
+    m_tracker.setProductVersion("ver1", "ver2");
+    m_tracker.trackPageView("/PlayerActivity");
+    m_tracker.dispatch();
+
     bindService(new Intent(this, SidPlayerService.class), m_serviceConnection, 0);
   }
 
@@ -96,6 +106,11 @@ public class PlayerActivity extends Activity implements OnClickListener
   protected void onStop()
   {
     super.onStop();
+    
+    m_tracker.trackPageView("/Unknown");
+    m_tracker.dispatch();
+    m_tracker.stop();
+    m_tracker = null;
     
     if(m_serviceConnection != null)
     {

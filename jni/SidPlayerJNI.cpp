@@ -11,6 +11,11 @@
 #include "builders/resid.h"
 #include "sidplay2.h"
 
+double mixer_value1 = 1.0;
+double mixer_value2 = 1.0;
+double mixer_value3 = 1.0;
+unsigned char sid_registers[ 0x19 ];
+
 struct Player
 {
   void *siddata;
@@ -85,16 +90,22 @@ JNIEXPORT jlong Java_net_bitheap_sidplayer_SidPlayer_jniInit(JNIEnv *env, jobjec
   ASSERT(player->sidemu != NULL);
 
   sid2_config_t cfg = player->sidemu->config();
-  cfg.clockForced  = false;
-  cfg.clockSpeed   = SID2_CLOCK_CORRECT;
-  cfg.clockDefault = SID2_CLOCK_PAL;
+  cfg.clockForced  = true;
+  cfg.environment  = sid2_envR;
+  cfg.forceDualSids= false;
+  cfg.emulateStereo= false;
+
+//x  cfg.clockSpeed   = SID2_CLOCK_CORRECT;
+//x  cfg.clockDefault = SID2_CLOCK_PAL;
   cfg.frequency    = 44100;
+
   cfg.playback     = sid2_mono;
+
   cfg.precision    = 16;
   //cfg.sidModel     = SID2_MODEL_CORRECT;
   cfg.sidDefault   = SID2_MOS6581;
   cfg.sidSamples   = true;
-  //cfg.optimisation  = 2;
+  cfg.optimisation  = SID2_MAX_OPTIMISATION;
 
   player->sidbuilder = new ReSIDBuilder("ReSID");
   ASSERT(player->sidbuilder != NULL);
