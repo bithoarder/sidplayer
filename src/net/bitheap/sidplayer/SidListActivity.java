@@ -221,6 +221,9 @@ public class SidListActivity extends Activity
         startActivity(intent);
         return true;
       }
+      case R.id.menu_search:
+        onSearchRequested();
+        return true;
     }
     return super.onOptionsItemSelected(item);
   }
