@@ -5,16 +5,22 @@ import com.google.android.apps.analytics.GoogleAnalyticsTracker;
 import net.bitheap.sidplayer.R;
 
 import android.app.Activity;
+import android.app.AlertDialog;
 import android.app.SearchManager;
 import android.content.ComponentName;
 import android.content.ContentResolver;
+import android.content.DialogInterface;
 import android.content.Intent;
 import android.content.ServiceConnection;
+import android.content.SharedPreferences;
+import android.content.pm.PackageManager.NameNotFoundException;
 import android.database.Cursor;
 import android.media.AudioManager;
 import android.os.Bundle;
 import android.os.IBinder;
 import android.os.RemoteException;
+import android.preference.PreferenceManager;
+import android.text.Html;
 import android.util.Log;
 import android.view.Menu;
 import android.view.MenuInflater;
@@ -27,7 +33,6 @@ import android.widget.ListView;
 import android.widget.SimpleCursorAdapter;
 import android.widget.TextView;
 import android.widget.AdapterView.OnItemClickListener;
-
 
 public class SidListActivity extends Activity 
 {
@@ -62,14 +67,23 @@ public class SidListActivity extends Activity
 
   private GoogleAnalyticsTracker m_tracker;
 
-  protected long m_playingStartedAt;
+  private SharedPreferences m_prefs;
 
   @Override
-  public void onCreate(Bundle savedInstanceState) 
+  public void onCreate(Bundle savedInstanceState)
   {
+    super.onCreate(savedInstanceState);
+
     Log.v(MODULE, "action="+getIntent().getAction());
     
-    super.onCreate(savedInstanceState);
+    m_prefs = PreferenceManager.getDefaultSharedPreferences(getBaseContext());
+
+    // todo: move this to the application instance 
+    m_tracker = GoogleAnalyticsTracker.getInstance();
+    m_tracker.start("UA-18467147-1", this);
+    //m_tracker.setProductVersion("ver1", "ver2");
+    // nothing is send back to google before .dispatch() is called, so no tracking is happening yet.
+    
     setContentView(R.layout.main);
     setVolumeControlStream(AudioManager.STREAM_MUSIC);
     
@@ -153,8 +167,10 @@ public class SidListActivity extends Activity
         startActivity(intent);
       }
     });
+    
+    showChangesDialogIfNew();
   }
-  
+
   @Override
   protected void onDestroy()
   {
@@ -166,11 +182,11 @@ public class SidListActivity extends Activity
   {
     super.onStart();
 
-    m_tracker = GoogleAnalyticsTracker.getInstance();
-    m_tracker.start("UA-18467147-1", this);
-    m_tracker.setProductVersion("ver1", "ver2");
-    m_tracker.trackPageView("/SidListActivity");
-    m_tracker.dispatch();
+    if(m_prefs.getBoolean("google-analytics-enabled", false))
+    {
+      m_tracker.trackPageView("/SidListActivity");
+      m_tracker.dispatch();
+    }
     
     Intent playSidIntent = new Intent(this, SidPlayerService.class);
     startService(playSidIntent);
@@ -184,11 +200,6 @@ public class SidListActivity extends Activity
   {
     super.onStop();
 
-    m_tracker.trackPageView("/Unknown");
-    m_tracker.dispatch();
-    m_tracker.stop();
-    m_tracker = null;
-
     if(m_serviceConnection != null)
     {
       unbindService(m_serviceConnection);
@@ -196,7 +207,7 @@ public class SidListActivity extends Activity
   }
 
   @Override
-  public boolean onCreateOptionsMenu(Menu menu) 
+  public boolean onCreateOptionsMenu(Menu menu)
   {
     super.onCreateOptionsMenu(menu);
     MenuInflater inflater = getMenuInflater();
@@ -207,27 +218,96 @@ public class SidListActivity extends Activity
   @Override
   public boolean onOptionsItemSelected(MenuItem item)
   {
+    Intent intent = null;
     switch(item.getItemId()) 
     {
       case R.id.menu_about:
-      {
-        Intent intent = new Intent(this, AboutActivity.class);
-        startActivity(intent);
-        return true;
-      }
+        intent = new Intent(this, AboutActivity.class);
+        break;
+
       case R.id.menu_hsvc:
-      {
-        Intent intent = new Intent(this, HSVCInstallationActivity.class);
-        startActivity(intent);
-        return true;
-      }
+        intent = new Intent(this, HSVCInstallationActivity.class);
+        break;
+
       case R.id.menu_search:
         onSearchRequested();
         return true;
+
+      case R.id.menu_preferences:
+        intent = new Intent(this, PreferenceActivity.class);
+        break;
     }
+    
+    if(intent != null)
+    {
+      startActivity(intent);
+      return true;
+    }
+
     return super.onOptionsItemSelected(item);
   }
 
+  private void showChangesDialogIfNew()
+  {
+    final String currentVersion;
+    try 
+    {
+      currentVersion = getPackageManager().getPackageInfo(getPackageName(), 0).versionName;
+    } 
+    catch (NameNotFoundException e) 
+    {
+      return;
+    }
+
+    //final SharedPreferences prefs = getSharedPreferences(PREFS_NAME, MODE_PRIVATE);
+    if(m_prefs.getString("last-changelog-seen", "").compareTo(currentVersion) != 0)
+    {
+      AlertDialog.Builder builder = new AlertDialog.Builder(this);
+      builder.setCancelable(false);
+      builder.setMessage(Html.fromHtml(Utils.readHtmlResource(getResources(), R.raw.changes)));
+      builder.setPositiveButton("Close", new DialogInterface.OnClickListener() {
+        public void onClick(DialogInterface dialog, int id) {
+          m_prefs.edit().putString("last-changelog-seen", currentVersion).commit();
+          dialog.cancel();
+          showGoogleAnalyticesDialog();
+        }
+      });
+      AlertDialog alert = builder.create();
+      alert.show();
+    }
+    else
+    {
+      showGoogleAnalyticesDialog();
+    }
+  }
+  
+  private void showGoogleAnalyticesDialog()
+  {
+    //final SharedPreferences prefs = getSharedPreferences(PREFS_NAME, MODE_PRIVATE);
+    if(!m_prefs.contains("google-analytics-enabled"))
+    {
+      AlertDialog.Builder builder = new AlertDialog.Builder(this);
+      builder.setCancelable(false);
+      builder.setMessage("SidPlayer can anonymously track which songs users are playing.\n" +
+      		"This can help me deside which songs to include with the app.\n" +
+      		"Do you wish to allow google analytices to track which songs you play?");
+      builder.setPositiveButton("Enable", new DialogInterface.OnClickListener() {
+        public void onClick(DialogInterface dialog, int id) {
+          m_prefs.edit().putBoolean("google-analytics-enabled", true).commit();
+          dialog.cancel();
+        }
+      });
+      builder.setNegativeButton("Disable", new DialogInterface.OnClickListener() {
+        public void onClick(DialogInterface dialog, int id) {
+          m_prefs.edit().putBoolean("google-analytics-enabled", false).commit();
+          dialog.cancel();
+        }
+      });
+      AlertDialog alert = builder.create();
+      alert.show();
+    }
+  }
+  
   private void updateSongInfo()
   {
     try

@@ -6,6 +6,7 @@ import java.io.InputStream;
 import android.app.Activity;
 import android.media.AudioManager;
 import android.os.Bundle;
+import android.util.TypedValue;
 import android.webkit.WebView;
 
 public class AboutActivity extends Activity
@@ -16,28 +17,10 @@ public class AboutActivity extends Activity
     super.onCreate(savedInstanceState);
     setVolumeControlStream(AudioManager.STREAM_MUSIC);
 
-    String html = readHtml();
+    String html = Utils.readHtmlResource(getResources(), R.raw.about);
     
     WebView webview = new WebView(this);
     setContentView(webview);
     webview.loadData(html, "text/html", "utf-8");
-  }
-
-  private String readHtml()
-  {
-    String html = "";
-    try 
-    {
-        InputStream stream = getAssets().open("about.html");
-        byte[] buffer = new byte[stream.available()];
-        stream.read(buffer);
-        stream.close();
-        html = new String(buffer).replace("\n", "  ");
-    } 
-    catch(IOException e) 
-    {
-        e.printStackTrace();
-    }
-    return html;
   }
 }

@@ -10,6 +10,7 @@ import android.content.ContentResolver;
 import android.content.ContentUris;
 import android.content.Context;
 import android.content.Intent;
+import android.content.SharedPreferences;
 import android.database.Cursor;
 import android.media.AudioFormat;
 import android.media.AudioManager;
@@ -19,6 +20,7 @@ import android.os.PowerManager;
 import android.os.Process;
 import android.os.RemoteException;
 import android.os.PowerManager.WakeLock;
+import android.preference.PreferenceManager;
 import android.telephony.PhoneStateListener;
 import android.telephony.TelephonyManager;
 import android.util.Log;
@@ -152,6 +154,8 @@ public class SidPlayerService extends Service implements Runnable
 
   private GoogleAnalyticsTracker m_tracker;
 
+  private SharedPreferences m_prefs;
+
   @Override
   public IBinder onBind(Intent intent)
   {
@@ -164,9 +168,13 @@ public class SidPlayerService extends Service implements Runnable
   {
     Log.d(MODULE, "OnCreate called");
 
+    m_prefs = PreferenceManager.getDefaultSharedPreferences(getBaseContext());
+    
+    // todo: move this to the application instance 
     m_tracker = GoogleAnalyticsTracker.getInstance();
     m_tracker.start("UA-18467147-1", this);
-    m_tracker.setProductVersion("ver1", "ver2");
+    //m_tracker.setProductVersion("ver1", "ver2");
+    // nothing is send back to google before .dispatch() is called, so no tracking is happening yet.
     
     Process.setThreadPriority(Process.THREAD_PRIORITY_AUDIO);
     
@@ -266,8 +274,11 @@ public class SidPlayerService extends Service implements Runnable
       if(dt > 1*1000)
       {
         Log.v(MODULE, "played " + m_playingName + " for " + (dt/1000.0) + "secs");
-        m_tracker.trackEvent("song", "played", m_playingName, (int)(dt/1000));
-        m_tracker.dispatch();
+        if(m_prefs.getBoolean("google-analytics-enabled", false))
+        {
+          m_tracker.trackEvent("song", "played", m_playingName, (int)(dt/1000));
+          m_tracker.dispatch();
+        }
       }
 
       thread.interrupt();

@@ -8,10 +8,12 @@ import android.app.Activity;
 import android.content.ComponentName;
 import android.content.Intent;
 import android.content.ServiceConnection;
+import android.content.SharedPreferences;
 import android.media.AudioManager;
 import android.os.Bundle;
 import android.os.IBinder;
 import android.os.RemoteException;
+import android.preference.PreferenceManager;
 import android.text.SpannableStringBuilder;
 import android.text.Layout.Alignment;
 import android.text.style.AlignmentSpan;
@@ -57,6 +59,8 @@ public class PlayerActivity extends Activity implements OnClickListener
   };
 
   private GoogleAnalyticsTracker m_tracker;
+
+  private SharedPreferences m_prefs;
   
   
   @Override
@@ -68,6 +72,14 @@ public class PlayerActivity extends Activity implements OnClickListener
     requestWindowFeature(Window.FEATURE_NO_TITLE);
     setContentView(R.layout.player);
     setVolumeControlStream(AudioManager.STREAM_MUSIC);
+
+    m_prefs = PreferenceManager.getDefaultSharedPreferences(getBaseContext());
+    
+    // todo: move this to the application instance 
+    m_tracker = GoogleAnalyticsTracker.getInstance();
+    m_tracker.start("UA-18467147-1", this);
+    //m_tracker.setProductVersion("ver1", "ver2");
+    // nothing is send back to google before .dispatch() is called, so no tracking is happening yet.
     
     m_titleTextView = (TextView)findViewById(R.id.title_text);
     m_authorTextView = (TextView)findViewById(R.id.author_text);
@@ -93,11 +105,11 @@ public class PlayerActivity extends Activity implements OnClickListener
   {
     super.onStart();
 
-    m_tracker = GoogleAnalyticsTracker.getInstance();
-    m_tracker.start("UA-18467147-1", this);
-    m_tracker.setProductVersion("ver1", "ver2");
-    m_tracker.trackPageView("/PlayerActivity");
-    m_tracker.dispatch();
+    if(m_prefs.getBoolean("google-analytics-enabled", false))
+    {
+      m_tracker.trackPageView("/PlayerActivity");
+      m_tracker.dispatch();
+    }
 
     bindService(new Intent(this, SidPlayerService.class), m_serviceConnection, 0);
   }
@@ -106,11 +118,6 @@ public class PlayerActivity extends Activity implements OnClickListener
   protected void onStop()
   {
     super.onStop();
-    
-    m_tracker.trackPageView("/Unknown");
-    m_tracker.dispatch();
-    m_tracker.stop();
-    m_tracker = null;
     
     if(m_serviceConnection != null)
     {

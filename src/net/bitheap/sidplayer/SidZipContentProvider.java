@@ -354,16 +354,14 @@ public class SidZipContentProvider extends ContentProvider
 
       try
       {
-        InputStream resourceStream = getContext().getResources().openRawResource(R.raw.c64music);
-        byte[] buffer = new byte[64*1024];
-        while(true)
-        {
-          int readlen = resourceStream.read(buffer);
-          if(readlen <= 0) break;
-          fileStream.write(buffer, 0, readlen);
-        }
+        String html = "";
+        InputStream stream = getContext().getAssets().open("c64music.zip");
+        byte[] buffer = new byte[stream.available()];
+        stream.read(buffer);
+        stream.close();
+
+        fileStream.write(buffer, 0, buffer.length);
         fileStream.close();
-        resourceStream.close();
       }
       catch(IOException e)
       {

@@ -1,0 +1,5 @@
+<?xml version="1.0" encoding="utf-8"?>
+<PreferenceScreen
+  xmlns:android="http://schemas.android.com/apk/res/android">
+<CheckBoxPreference android:summaryOn="Played song info will be sent to google analytics." android:title="Track played songs." android:key="google-analytics-enabled" android:summaryOff="No information will be sent to google analytics."></CheckBoxPreference>
+</PreferenceScreen>

@@ -16,28 +16,10 @@ public class HSVCInstallationActivity extends Activity
     super.onCreate(savedInstanceState);
     setVolumeControlStream(AudioManager.STREAM_MUSIC);
 
-    String html = readHtml();
+    String html = Utils.readHtmlResource(getResources(), R.raw.hvsc);
     
     WebView webview = new WebView(this);
     setContentView(webview);
     webview.loadData(html, "text/html", "utf-8");
-  }
-
-  private String readHtml()
-  {
-    String html = "";
-    try 
-    {
-        InputStream stream = getAssets().open("hvsc.html");
-        byte[] buffer = new byte[stream.available()];
-        stream.read(buffer);
-        stream.close();
-        html = new String(buffer).replace("\n", "  ");
-    } 
-    catch(IOException e) 
-    {
-        e.printStackTrace();
-    }
-    return html;
   }
 }
