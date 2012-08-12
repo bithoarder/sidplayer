@@ -20,6 +20,8 @@
 #include "SidTune.h"
 #include "SidTuneTools.h"
 
+#include <ctype.h>
+
 #define X00_ID_LEN   8
 #define X00_NAME_LEN 17
 

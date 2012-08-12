@@ -1,10 +1,28 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
-  <string
-    name="app_name">SID Player</string>
-  <string
-    name="search_label">some search label</string>
-  <string
-    name="search_hint">some search hint</string>
+  <string name="app_name">SID Player</string>
+  <string name="search_label">SID Player</string>
+  <string name="search_hint">Search SIDs</string>
+  <string name="title">Title</string>
+  <string name="artist">Artist</string>
+  <string name="author">Author</string>
+  <string name="release">Release</string>
+  <string name="song_">Song:</string>
+  <string name="content_previous_tune">previous tune</string>
+  <string name="content_previous_song">previous song</string>
+  <string name="content_play">play</string>
+  <string name="content_next_song">next song</string>
+  <string name="content_next_tune">next tune</string>
+
+	<string name="text_paused_cellular">Would you like to enable downloading over cellular connections? Depending on your data plan, this may cost you money.</string>
+	<string name="text_paused_cellular_2">If you choose not to enable downloading over cellular connections, the download will automatically resume when wi-fi is available.</string>
+	<string name="text_button_resume_cellular">Resume download</string>
+	<string name="text_button_wifi_settings">Wi-Fi settings</string>
+	<string name="text_button_pause">Pause Download</string>
+	<string name="text_button_resume">Resume Download</string>
+	<string name="text_button_cancel">Cancel</string>
+
+	<string name="state_downloading">Downloading High Volume Sid Collection</string>
+	<string name="state_failed_unlicensed">Download failed, try reinstalling SID Player from the google play store.</string>
 
 </resources>

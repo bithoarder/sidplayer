@@ -17,4 +17,7 @@ interface ISidPlayerService
   int getSongCount();
   int getCurrentSong();
   void setSong(int song);
+
+  int getCurrentSongTime();
+  int getCurrentSongDuration();
 }

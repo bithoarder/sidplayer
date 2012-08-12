@@ -1,11 +1,18 @@
-# This requires the crystax ndk to build, googles stock ndk does not support some stl/c++ features needed by libsidplay2
-
 LOCAL_PATH := $(call my-dir)
 
 include $(CLEAR_VARS)
 
 LOCAL_MODULE	:= SidPlayerJNI
+LOCAL_ARM_MODE	:= arm # arm gives a good boost (~10-15%) over thumb
 LOCAL_SRC_FILES	:= SidPlayerJNI.cpp \
+	StilPakJNI.cpp \
+	stilpak/stilpak.cpp \
+	stilpak/pak.cpp \
+	lzma/LzmaDec.c \
+	libstemmer/libstemmer/libstemmer.c \
+	libstemmer/runtime/api.c \
+	libstemmer/runtime/utilities.c \
+	libstemmer/src_c/stem_ISO_8859_1_english.c \
 	resid/envelope.cpp \
 	resid/extfilt.cpp \
 	resid/filter.cpp \
@@ -46,15 +53,26 @@ LOCAL_SRC_FILES	:= SidPlayerJNI.cpp \
 	libsidplay2/sidtune/SidTuneTools.cpp \
 	libsidplay2/xsid/xsid.cpp
 
-LOCAL_CPPFLAGS	+= -I$(LOCAL_PATH)
-LOCAL_CPPFLAGS	+= -I$(LOCAL_PATH)/libsidplay2/include/sidplay
-LOCAL_CPPFLAGS	+= -I$(LOCAL_PATH)/libsidplay2/include
-LOCAL_CPPFLAGS	+= -I$(LOCAL_PATH)/libsidplay2/include/sidplay/builders
-LOCAL_CPPFLAGS	+= -I$(LOCAL_PATH)/resid
-LOCAL_LDLIBS	+= -lstdc++ -llog 
+#LOCAL_CPPFLAGS	+= -I$(LOCAL_PATH)
+#LOCAL_CPPFLAGS	+= -I$(LOCAL_PATH)/libsidplay2/include/sidplay
+#LOCAL_CPPFLAGS	+= -I$(LOCAL_PATH)/libsidplay2/include
+#LOCAL_CPPFLAGS	+= -I$(LOCAL_PATH)/libsidplay2/include/sidplay/builders
+#LOCAL_CPPFLAGS	+= -I$(LOCAL_PATH)/resid
+
+LOCAL_CPPFLAGS	+= -std=c++0x -D__STDC_INT64__ -Wno-multichar
+LOCAL_CPPFLAGS	+= -DHAVE_SSTREAM
+
+LOCAL_C_INCLUDES += $(LOCAL_PATH)
+LOCAL_C_INCLUDES += $(LOCAL_PATH)/libsidplay2/include/sidplay
+LOCAL_C_INCLUDES += $(LOCAL_PATH)/libsidplay2/include
+LOCAL_C_INCLUDES += $(LOCAL_PATH)/libsidplay2/include/sidplay/builders
+LOCAL_C_INCLUDES += $(LOCAL_PATH)/resid
+LOCAL_C_INCLUDES += $(LOCAL_PATH)/libstemmer/include
+
+LOCAL_LDLIBS	+= -lstdc++ -llog
 
 ifneq ($(NDK_APP_OPTIM),debug)
-  NDK_APP_CFLAGS := $(NDK_APP_CFLAGS) -O3 -marm # arm gives a good boost (~10-15%) over thumb
+  NDK_APP_CFLAGS := $(NDK_APP_CFLAGS) -O3
 endif
 
 include $(BUILD_SHARED_LIBRARY)

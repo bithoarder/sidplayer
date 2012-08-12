@@ -1,10 +1,7 @@
 <?xml version="1.0" encoding="utf-8"?>
 <menu
   xmlns:android="http://schemas.android.com/apk/res/android">
-  <item android:id="@+id/menu_search" android:icon="@android:drawable/ic_menu_search" android:title="Search"></item><item android:title="Preferences" android:id="@+id/menu_preferences" android:icon="@android:drawable/ic_menu_preferences"></item><item
-    android:icon="@android:drawable/ic_menu_add"
-    android:title="Get more tunes"
-    android:id="@+id/menu_hsvc"></item>
+  <item android:id="@+id/menu_search" android:icon="@android:drawable/ic_menu_search" android:title="Search"></item><item android:title="Preferences" android:id="@+id/menu_preferences" android:icon="@android:drawable/ic_menu_preferences"></item>
   <item
     android:icon="@android:drawable/ic_menu_info_details"
     android:title="About"

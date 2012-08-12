@@ -1,16 +1,26 @@
 package net.bitheap.sidplayer;
 
+
 import com.google.android.apps.analytics.GoogleAnalyticsTracker;
+import com.google.android.vending.expansion.downloader.DownloaderClientMarshaller;
+import com.google.android.vending.expansion.downloader.Helpers;
+import com.google.android.vending.expansion.downloader.impl.DownloaderService;
 
 import net.bitheap.sidplayer.R;
+import net.bitheap.sidplayer.downloader.HVSCDownloaderService;
+import net.bitheap.sidplayer.hvscprovider.HVSCContentProvider;
 
 import android.app.Activity;
 import android.app.AlertDialog;
+import android.app.PendingIntent;
 import android.app.SearchManager;
+import android.content.BroadcastReceiver;
 import android.content.ComponentName;
 import android.content.ContentResolver;
+import android.content.Context;
 import android.content.DialogInterface;
 import android.content.Intent;
+import android.content.IntentFilter;
 import android.content.ServiceConnection;
 import android.content.SharedPreferences;
 import android.content.pm.PackageManager.NameNotFoundException;
@@ -73,14 +83,14 @@ public class SidListActivity extends Activity
   public void onCreate(Bundle savedInstanceState)
   {
     super.onCreate(savedInstanceState);
-
+    
     Log.v(MODULE, "action="+getIntent().getAction());
     
     m_prefs = PreferenceManager.getDefaultSharedPreferences(getBaseContext());
 
     // todo: move this to the application instance 
     m_tracker = GoogleAnalyticsTracker.getInstance();
-    m_tracker.start("UA-18467147-1", this);
+    m_tracker.startNewSession("UA-18467147-1", this);
     //m_tracker.setProductVersion("ver1", "ver2");
     // nothing is send back to google before .dispatch() is called, so no tracking is happening yet.
     
@@ -91,19 +101,35 @@ public class SidListActivity extends Activity
     m_playPauseButton = (ImageButton)findViewById(R.id.play_pause_button);
     m_titleTextView = (TextView)findViewById(R.id.title_text);
     m_authorTextView = (TextView)findViewById(R.id.author_text);
-    
+
     final ContentResolver cr = getContentResolver();
-    if(getIntent().getAction().equals(Intent.ACTION_SEARCH))
+    if(getIntent().getAction()!=null && getIntent().getAction().equals(Intent.ACTION_SEARCH))
     {
       String query = getIntent().getStringExtra(SearchManager.QUERY);
       Log.v(MODULE, "query="+query);
       setTitle("SID Player : " + query);
-      m_sidCursor = cr.query(SidZipContentProvider.CONTENT_URI, null, query, null, null);
+      m_sidCursor = cr.query(HVSCContentProvider.CONTENT_URI, null, query, null, null);
+    }
+    else if(getIntent().getAction()!=null && getIntent().getAction().equals(Intent.ACTION_VIEW))
+    {
+      int sid_index = Integer.parseInt(getIntent().getDataString());
+      Log.v(MODULE, "view="+sid_index);
+
+      Intent playSid = new Intent(this, SidPlayerService.class);
+      playSid.setAction(SidPlayerService.PLAY_SID);
+      playSid.putExtra("sid_index", sid_index);
+      startService(playSid);
+      
+      // show Player instead of ListView:
+      startActivity(new Intent(this, PlayerActivity.class));
+      finish();
+      return;
     }
     else
     {
       setTitle("SID Player");
-      m_sidCursor = cr.query(SidZipContentProvider.CONTENT_URI, null, null, null, null);
+      Log.v(MODULE, HVSCContentProvider.CONTENT_URI.toString());
+      m_sidCursor = cr.query(HVSCContentProvider.CONTENT_URI, null, null, null, null);
     }
     
     ListView listView = (ListView)findViewById(R.id.ListView01);
@@ -113,6 +139,16 @@ public class SidListActivity extends Activity
         new int[]{android.R.id.text1, android.R.id.text2} );
     
     listView.setAdapter(adapter);
+    
+    IntentFilter filter = new IntentFilter("net.bitheap.sidplayer.SID_UPDATE");
+    registerReceiver(new BroadcastReceiver() 
+    {
+      @Override
+      public void onReceive(Context context, Intent intent)
+      {
+        updateSongInfo();
+      }
+    }, filter);
     
     listView.setOnItemClickListener(new OnItemClickListener()
     {
@@ -131,13 +167,10 @@ public class SidListActivity extends Activity
           
           //m_playingStartedAt = java.lang.System.currentTimeMillis();
           //m_playingName = m_service.getInfoString(0);
-
         }
         catch(RemoteException e)
         {
         }
-
-        updateSongInfo();
       }
     });
     
@@ -154,7 +187,6 @@ public class SidListActivity extends Activity
         catch(RemoteException e)
         {
         }
-        updateSongInfo();
       }
     });
 
@@ -188,10 +220,9 @@ public class SidListActivity extends Activity
       m_tracker.dispatch();
     }
     
-    Intent playSidIntent = new Intent(this, SidPlayerService.class);
-    startService(playSidIntent);
-    
+    startService(new Intent(this, SidPlayerService.class));
     bindService(new Intent(this, SidPlayerService.class), m_serviceConnection, 0);
+
     updateSongInfo();
   }
 
@@ -223,10 +254,6 @@ public class SidListActivity extends Activity
     {
       case R.id.menu_about:
         intent = new Intent(this, AboutActivity.class);
-        break;
-
-      case R.id.menu_hsvc:
-        intent = new Intent(this, HSVCInstallationActivity.class);
         break;
 
       case R.id.menu_search:

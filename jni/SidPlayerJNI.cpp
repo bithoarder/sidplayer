@@ -1,15 +1,12 @@
-#include <string.h>
-#include <new>
-#include <memory>
-#include <stdlib.h>
+#include "SidTune.h"
+#include "sidplay2.h"
+#include "builders/resid.h"
+
+#include <cstdint>
+#include <cstdlib>
+
 #include <jni.h>
 #include <android/log.h>
-//#include "sidplay/SidTune.h"
-//#include "sidplay/builders/resid.h"
-//#include "sidplay/sidplay2.h"
-#include "SidTune.h"
-#include "builders/resid.h"
-#include "sidplay2.h"
 
 double mixer_value1 = 1.0;
 double mixer_value2 = 1.0;
@@ -52,7 +49,7 @@ JNIEXPORT jlong Java_net_bitheap_sidplayer_SidPlayer_jniInit(JNIEnv *env, jobjec
   }
 
   DEBUG("loaded sidtune!!!");
-  
+
   const SidTuneInfo &info = player->sidtune->getInfo();
   player->sidtune->selectSong(0);//info.startSong);
 
@@ -114,10 +111,10 @@ JNIEXPORT jlong Java_net_bitheap_sidplayer_SidPlayer_jniInit(JNIEnv *env, jobjec
   player->sidbuilder->create(1);
   player->sidbuilder->filter(false);
   //player->sidbuilder->filter((void*)0);
-  
+
   int rc = player->sidemu->load(player->sidtune);
   ASSERT(rc == 0);
-  
+
   player->sidemu->config(cfg);
 
   return (jlong)player;
@@ -152,8 +149,8 @@ JNIEXPORT jboolean Java_net_bitheap_sidplayer_SidPlayer_jniPlay(JNIEnv *env, job
   int peak = 0;
   for(int i=1; i<size/2; i++)
   {
-	  int delta = abs(data[i+1]-data[i]);
-	  if(delta > peak) peak = delta;
+    int delta = abs(data[i+1]-data[i]);
+    if(delta > peak) peak = delta;
   }
 
   env->ReleaseShortArrayElements(audiodata, data, NULL);

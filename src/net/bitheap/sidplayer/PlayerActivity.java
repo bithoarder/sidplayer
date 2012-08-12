@@ -5,8 +5,11 @@ import com.google.android.apps.analytics.GoogleAnalyticsTracker;
 import net.bitheap.sidplayer.R;
 
 import android.app.Activity;
+import android.content.BroadcastReceiver;
 import android.content.ComponentName;
+import android.content.Context;
 import android.content.Intent;
+import android.content.IntentFilter;
 import android.content.ServiceConnection;
 import android.content.SharedPreferences;
 import android.media.AudioManager;
@@ -31,12 +34,16 @@ public class PlayerActivity extends Activity implements OnClickListener
   private TextView m_titleTextView;
   private TextView m_authorTextView;
   private TextView m_releaseTextView;
-  private TextView m_SongNumberTextView;
+  private TextView m_songNumberTextView;
+  private TextView m_songDurationTextView;
   private ImageButton m_playPauseButton;
   private ImageButton m_nextTuneButton;
   private ImageButton m_prevTuneButton;
   private ImageButton m_nextSongButton;
   private ImageButton m_prevSongButton;
+
+  private GoogleAnalyticsTracker m_tracker;
+  private SharedPreferences m_prefs;
 
   private ISidPlayerService m_service;
   private ServiceConnection m_serviceConnection = new ServiceConnection()
@@ -46,7 +53,7 @@ public class PlayerActivity extends Activity implements OnClickListener
     {
       Log.v(MODULE, "onServiceConnected");
       m_service = ISidPlayerService.Stub.asInterface(service);
-      updateSongInfo();
+      updateSidInfo();
     }
 
     //@Override
@@ -54,15 +61,10 @@ public class PlayerActivity extends Activity implements OnClickListener
     {
       Log.v(MODULE, "onServiceDisconnected");
       m_service = null;
-      updateSongInfo();
+      updateSidInfo();
     }
   };
 
-  private GoogleAnalyticsTracker m_tracker;
-
-  private SharedPreferences m_prefs;
-  
-  
   @Override
   public void onCreate(Bundle savedInstanceState) 
   {
@@ -77,14 +79,15 @@ public class PlayerActivity extends Activity implements OnClickListener
     
     // todo: move this to the application instance 
     m_tracker = GoogleAnalyticsTracker.getInstance();
-    m_tracker.start("UA-18467147-1", this);
+    m_tracker.startNewSession("UA-18467147-1", this);
     //m_tracker.setProductVersion("ver1", "ver2");
     // nothing is send back to google before .dispatch() is called, so no tracking is happening yet.
     
     m_titleTextView = (TextView)findViewById(R.id.title_text);
     m_authorTextView = (TextView)findViewById(R.id.author_text);
     m_releaseTextView = (TextView)findViewById(R.id.release_text);
-    m_SongNumberTextView = (TextView)findViewById(R.id.song_number_text);
+    m_songNumberTextView = (TextView)findViewById(R.id.song_number_text);
+    m_songDurationTextView = (TextView)findViewById(R.id.song_duration_text);
     m_playPauseButton = (ImageButton)findViewById(R.id.play_pause_button);
     m_nextTuneButton = (ImageButton)findViewById(R.id.next_tune_button);
     m_prevTuneButton = (ImageButton)findViewById(R.id.prev_tune_button);
@@ -97,7 +100,7 @@ public class PlayerActivity extends Activity implements OnClickListener
     m_nextSongButton.setOnClickListener(this);
     m_prevSongButton.setOnClickListener(this);
 
-    updateSongInfo();
+    updateSidInfo();
   }
   
   @Override
@@ -112,6 +115,27 @@ public class PlayerActivity extends Activity implements OnClickListener
     }
 
     bindService(new Intent(this, SidPlayerService.class), m_serviceConnection, 0);
+
+    IntentFilter filter = new IntentFilter("net.bitheap.sidplayer.SONG_TIME_UPDATE");
+    registerReceiver(new BroadcastReceiver() 
+    {
+      @Override
+      public void onReceive(Context context, Intent intent)
+      {
+        updateDurationInfo();
+      }
+    }, filter);
+    
+    filter = new IntentFilter("net.bitheap.sidplayer.SID_UPDATE");
+    registerReceiver(new BroadcastReceiver() 
+    {
+      @Override
+      public void onReceive(Context context, Intent intent)
+      {
+        updateSidInfo();
+      }
+    }, filter);
+    
   }
 
   @Override
@@ -125,7 +149,19 @@ public class PlayerActivity extends Activity implements OnClickListener
     }
   }
   
-  //@Override
+  @Override
+  protected void onResume()
+  {
+    super.onResume();
+  }
+  
+  @Override
+  protected void onPause()
+  {
+    super.onPause();
+  }
+  
+  @Override
   public void onClick(View v)
   {
     if(m_service == null) return;
@@ -158,11 +194,11 @@ public class PlayerActivity extends Activity implements OnClickListener
       finish();
     }
 
-    updateSongInfo();
+    //updateSidInfo();
   }
   
   
-  private void updateSongInfo()
+  private void updateSidInfo()
   {
     m_playPauseButton.setEnabled(false);
     m_nextTuneButton.setEnabled(false);
@@ -170,9 +206,12 @@ public class PlayerActivity extends Activity implements OnClickListener
     m_nextSongButton.setEnabled(false);
     m_prevSongButton.setEnabled(false);
     
+    updateDurationInfo();
+    
     if(m_service == null)
     {
-      m_SongNumberTextView.setText("?/?");
+      m_songNumberTextView.setText("");
+      m_songDurationTextView.setText("");
     }
     else
     {
@@ -192,11 +231,11 @@ public class PlayerActivity extends Activity implements OnClickListener
 
         int currentSong = m_service.getCurrentSong();
         int songCount = m_service.getSongCount();
-        
-        m_SongNumberTextView.setText(String.format("%d/%d", currentSong, songCount));
-        m_playPauseButton.setImageResource(m_service.isPlaying() ? android.R.drawable.ic_media_pause : android.R.drawable.ic_media_play);
+        m_songNumberTextView.setText(String.format("%d/%d", currentSong, songCount));
 
+        m_playPauseButton.setImageResource(m_service.isPlaying() ? android.R.drawable.ic_media_pause : android.R.drawable.ic_media_play);
         m_playPauseButton.setEnabled(true);
+        
         if(songCount>1)
         {
           if(currentSong<songCount) m_nextSongButton.setEnabled(true);
@@ -219,4 +258,27 @@ public class PlayerActivity extends Activity implements OnClickListener
       }
     }
   }
+
+  private void updateDurationInfo()
+  {
+    if(m_service == null)
+    {
+      m_songDurationTextView.setText("");
+    }
+    else
+    {
+      try
+      {
+        int songTime = m_service.getCurrentSongTime();
+        int songDuration = m_service.getCurrentSongDuration();
+        m_songDurationTextView.setText(String.format("%d:%02d/%d:%02d", songTime/60, songTime%60, songDuration/60, songDuration%60));
+      }
+      catch(RemoteException e)
+      {
+        Log.v(MODULE, "failed to call service"+e);
+        finish();
+      }
+    }
+  }
+
 }
